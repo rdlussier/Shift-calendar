@@ -69,14 +69,7 @@ function monthHTML(y, m, withTags) {
   cells.forEach((c, i) => {
     const k = iso(c.y, c.m, c.d), s = days[k] || '', tg = withTags ? (tags[k] || []) : [];
     const at = (j) => cells[j] && cells[j].in;
-    const col = i % 7, e = [];
-    if (c.in) {
-      if (!at(i - 7)) e.push('inset 0 2.5px 0 #14213D');
-      if (!at(i + 7)) e.push('inset 0 -2.5px 0 #14213D');
-      if (col === 0 || !at(i - 1)) e.push('inset 2.5px 0 0 #14213D');
-      if (col === 6 || !at(i + 1)) e.push('inset -2.5px 0 0 #14213D');
-    }
-    h += `<div class="cell ${s} ${c.in ? '' : 'out'} ${k === t ? 'today' : ''}" data-d="${k}" style="${e.length ? 'box-shadow:' + e.join(',') : ''}">` +
+    h += `<div class="cell ${s} ${c.in ? '' : 'out'} ${k === t ? 'today' : ''}" data-d="${k}">` +
       `<div class="top"><span class="n">${c.d}</span>${s ? `<span class="lab">${LABEL[s]}</span>` : ''}</div>` +
       (tg.length ? `<div class="tg">${tg.join(' · ')}</div>` : '') + '</div>';
   });
