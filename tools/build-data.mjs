@@ -9,7 +9,7 @@ if (!pass) { console.error('SHIFT_PASSCODE not set'); process.exit(1); }
 let raw = ''; for await (const ch of process.stdin) raw += ch;
 const events = JSON.parse(raw);
 const days = {};
-const kind = (s) => /night/i.test(s) ? 'N' : /day/i.test(s) ? 'D' : /vacation/i.test(s) ? 'V' : null;
+const kind = (s) => { const t = s.replace(/^[^A-Za-z]+/, '').trim().toLowerCase(); return t === 'night shift' ? 'N' : t === 'day shift' ? 'D' : t === 'vacation' ? 'V' : null; };  // exact names only
 const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 for (const e of events) {
   const k = kind(e.summary || ''); if (!k) continue;
