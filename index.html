@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Shift Calendar</title>
+<meta name="theme-color" content="#14213D">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app" hidden>
+  <header id="bar">
+    <button id="prev" class="ic" aria-label="Previous">‹</button>
+    <h1 id="title"></h1>
+    <button id="next" class="ic" aria-label="Next">›</button>
+  </header>
+  <div id="sub">
+    <div class="seg"><button id="vMonth" class="on">Month</button><button id="vYear">Year</button></div>
+    <button id="today" class="pill">Today</button>
+    <button id="share" class="pill ghost">Share</button>
+  </div>
+  <main id="stage"><div id="view"></div></main>
+  <footer id="legend"></footer>
+</div>
+
+<section id="lock">
+  <div class="lockcard">
+    <div class="logo"></div>
+    <h2>Shift Calendar</h2>
+    <p>Enter your passcode. You'll only need to do this once on this device.</p>
+    <form id="lockForm"><input id="pass" type="password" autocomplete="current-password" placeholder="Passcode" required><button class="pill">Unlock</button></form>
+    <p id="lockMsg" class="msg"></p>
+  </div>
+</section>
+
+<div id="sheetBack" hidden></div>
+<aside id="sheet" hidden></aside>
+
+<section id="shareView" hidden>
+  <div id="shareCanvas"></div>
+  <div id="shareCtl">
+    <label class="tog"><input type="checkbox" id="shareTags"><span>Include personal tags</span></label>
+    <div class="seg"><button id="sMonth" class="on">Month</button><button id="sYear">Year</button></div>
+    <button id="shareHide" class="pill ghost">Hide controls</button>
+    <button id="shareClose" class="pill">Done</button>
+  </div>
+  <button id="shareShow" hidden aria-label="Show controls"></button>
+</section>
+<script src="app.js"></script>
+</body>
+</html>
