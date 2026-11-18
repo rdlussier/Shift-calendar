@@ -54,6 +54,18 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .tagbtn.on{background:var(--ink);color:var(--mist);border-color:var(--ink)}
 .addtag{display:flex;gap:8px;margin-top:12px}
 .addtag input{flex:1;padding:10px 14px;border-radius:999px;border:1.5px solid var(--line);font:inherit;font-size:14px;background:#fff;user-select:text}
+/* multi-select */
+#selbar{position:fixed;left:0;right:0;bottom:0;max-width:640px;margin:0 auto;background:var(--mist);border-radius:22px 22px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom));z-index:6;animation:up .25s cubic-bezier(.2,.8,.2,1);box-shadow:0 -10px 40px #14213D40}
+.selhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.selcount{font-family:Fredoka,Nunito,system-ui,sans-serif;font-weight:600;font-size:17px}
+.selcount b{font-size:22px}
+.selhint{font-size:12px;font-weight:700;color:var(--slate);margin:-2px 0 8px;text-align:center}
+.tagbtn.part{border-color:var(--ink);background:#14213D1A}
+.tagbtn small{opacity:.7;font-weight:700;margin-left:3px}
+.tagbtn:disabled,#selbar .pill:disabled{opacity:.4}
+body.selecting #app{padding-bottom:calc(210px + env(safe-area-inset-bottom))}
+.cell.sel{outline:3px solid var(--ink);outline-offset:-3px}
+.cell.sel::after{content:"\2713";position:absolute;left:4px;top:3px;width:18px;height:18px;border-radius:50%;background:var(--ink);color:var(--mist);font-size:11px;font-weight:800;display:grid;place-items:center}
 /* lock */
 #lock{position:fixed;inset:0;display:grid;place-items:center;background:var(--ink);padding:24px;z-index:20}
 #lock[hidden]{display:none}
