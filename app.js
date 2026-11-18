@@ -13,6 +13,7 @@ const store = {
 let days = {};                      // 'YYYY-MM-DD' -> D|N|V
 let tags = store.get('tags', {});   // 'YYYY-MM-DD' -> [tag]
 let custom = store.get('customTags', []);
+let sel = new Set(), selecting = false;   // multi-select mode
 let view = 'month', cur = todayParts();  // {y, m}
 const pad = (n) => String(n).padStart(2, '0');
 const iso = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
@@ -69,7 +70,7 @@ function monthHTML(y, m, withTags) {
   cells.forEach((c, i) => {
     const k = iso(c.y, c.m, c.d), s = days[k] || '', tg = withTags ? (tags[k] || []) : [];
     const at = (j) => cells[j] && cells[j].in;
-    h += `<div class="cell ${s} ${c.in ? '' : 'out'} ${k === t ? 'today' : ''}" data-d="${k}">` +
+    h += `<div class="cell ${s} ${c.in ? '' : 'out'} ${k === t ? 'today' : ''} ${withTags && selecting && sel.has(k) ? 'sel' : ''}" data-d="${k}">` +
       `<div class="top"><span class="n">${c.d}</span>${s ? `<span class="lab">${LABEL[s]}</span>` : ''}</div>` +
       (tg.length ? `<div class="tg">${tg.join(' · ')}</div>` : '') + '</div>';
   });
@@ -134,6 +135,11 @@ function toggleTag(k, t) {
   if (a.length) tags[k] = a; else delete tags[k];
   store.set('tags', tags);
 }
+function setTag(k, t, on) {
+  const a = tags[k] || [], i = a.indexOf(t);
+  if (on && i < 0) a.push(t); else if (!on && i >= 0) a.splice(i, 1);
+  if (a.length) tags[k] = a; else delete tags[k];
+}
 $('#sheet').addEventListener('click', (e) => {
   const b = e.target.closest('.tagbtn'); if (!b) return;
   const k = $('#sheet').dataset.k; toggleTag(k, b.dataset.t); b.classList.toggle('on'); render();
@@ -147,13 +153,45 @@ $('#sheet').addEventListener('submit', (e) => {
 });
 $('#sheetBack').addEventListener('click', closeSheet);
 
+/* ---------- multi-select ---------- */
+const allTags = () => [...PRESET_TAGS, ...custom.filter((c) => !PRESET_TAGS.includes(c))];
+function startSelect(k) { closeSheet(); selecting = true; sel = new Set([k]); document.body.classList.add('selecting'); renderSel(); render(); }
+function endSelect() { selecting = false; sel = new Set(); document.body.classList.remove('selecting'); $('#selbar').hidden = true; render(); }
+function toggleSel(k) { sel.has(k) ? sel.delete(k) : sel.add(k); renderSel(); render(); }
+function renderSel() {
+  const n = sel.size, keys = [...sel];
+  $('#selbar').innerHTML = `<div class="selhead"><button class="pill ghost" data-a="cancel">Cancel</button>` +
+    `<div class="selcount"><b>${n}</b> ${n === 1 ? 'day' : 'days'} selected</div><button class="pill" data-a="done">Done</button></div>` +
+    (n ? '' : '<div class="selhint">Tap days to select them</div>') +
+    `<div class="tags">${allTags().map((t) => {
+      const c = keys.filter((k) => (tags[k] || []).includes(t)).length;
+      const st = n && c === n ? 'on' : c ? 'part' : '';
+      return `<button class="tagbtn ${st}" data-t="${t.replace(/"/g, '&quot;')}"${n ? '' : ' disabled'}>${t}${c && c < n ? ` <small>${c}/${n}</small>` : ''}</button>`;
+    }).join('')}</div>` +
+    `<form class="addtag"><input placeholder="New tag for all…" maxlength="18"><button class="pill"${n ? '' : ' disabled'}>Add</button></form>`;
+  $('#selbar').hidden = false;
+}
+$('#selbar').addEventListener('click', (e) => {
+  const a = e.target.closest('[data-a]');
+  if (a) return endSelect();
+  const b = e.target.closest('.tagbtn'); if (!b || !sel.size) return;
+  const t = b.dataset.t, keys = [...sel], all = keys.every((k) => (tags[k] || []).includes(t));
+  keys.forEach((k) => setTag(k, t, !all)); store.set('tags', tags);
+  navigator.vibrate && navigator.vibrate(10); renderSel(); render();
+});
+$('#selbar').addEventListener('submit', (e) => {
+  e.preventDefault(); const inp = e.target.querySelector('input'); const t = inp.value.trim(); if (!t || !sel.size) return;
+  if (!PRESET_TAGS.includes(t) && !custom.includes(t)) { custom.push(t); store.set('customTags', custom); }
+  [...sel].forEach((k) => setTag(k, t, true)); store.set('tags', tags); renderSel(); render();
+});
+
 /* ---------- gestures ---------- */
 let pressTimer = null, sx = 0, sy = 0, moved = false, longFired = false;
 const stage = $('#stage');
 stage.addEventListener('touchstart', (e) => {
   const t = e.touches[0]; sx = t.clientX; sy = t.clientY; moved = false; longFired = false;
   const c = e.target.closest('.cell');
-  if (c && view === 'month') pressTimer = setTimeout(() => { longFired = true; navigator.vibrate && navigator.vibrate(15); openSheet(c.dataset.d); }, 480);
+  if (c && view === 'month') pressTimer = setTimeout(() => { longFired = true; navigator.vibrate && navigator.vibrate(15); if (!selecting) startSelect(c.dataset.d); else toggleSel(c.dataset.d); }, 480);
 }, { passive: true });
 stage.addEventListener('touchmove', (e) => { const t = e.touches[0]; if (Math.abs(t.clientX - sx) > 8 || Math.abs(t.clientY - sy) > 8) { moved = true; clearTimeout(pressTimer); } }, { passive: true });
 stage.addEventListener('touchend', (e) => {
@@ -163,17 +201,17 @@ stage.addEventListener('touchend', (e) => {
 }, { passive: false });
 stage.addEventListener('click', (e) => {
   if (longFired) { longFired = false; return; }
-  const c = e.target.closest('.cell'); if (c) return openSheet(c.dataset.d);
+  const c = e.target.closest('.cell'); if (c) return selecting ? toggleSel(c.dataset.d) : openSheet(c.dataset.d);
   const m = e.target.closest('.mm'); if (m) { cur = { y: cur.y, m: +m.dataset.m }; view = 'month'; dir = 1; render(); }
 });
 stage.addEventListener('contextmenu', (e) => { if (e.target.closest('.cell')) e.preventDefault(); });
 // desktop long-press / long-click via mouse
-stage.addEventListener('mousedown', (e) => { const c = e.target.closest('.cell'); if (c && view === 'month' && e.button === 0) pressTimer = setTimeout(() => { longFired = true; openSheet(c.dataset.d); }, 520); });
+stage.addEventListener('mousedown', (e) => { const c = e.target.closest('.cell'); if (c && view === 'month' && e.button === 0) pressTimer = setTimeout(() => { longFired = true; if (!selecting) startSelect(c.dataset.d); else toggleSel(c.dataset.d); }, 520); });
 ['mouseup', 'mouseleave'].forEach((n) => stage.addEventListener(n, () => clearTimeout(pressTimer)));
-document.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') step(-1); if (e.key === 'ArrowRight') step(1); if (e.key === 'Escape') closeSheet(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') step(-1); if (e.key === 'ArrowRight') step(1); if (e.key === 'Escape') { closeSheet(); if (selecting) endSelect(); } });
 
 $('#prev').onclick = () => step(-1); $('#next').onclick = () => step(1); $('#today').onclick = goToday;
-$('#vMonth').onclick = () => { view = 'month'; render(); }; $('#vYear').onclick = () => { view = 'year'; render(); };
+$('#vMonth').onclick = () => { view = 'month'; render(); }; $('#vYear').onclick = () => { if (selecting) endSelect(); view = 'year'; render(); };
 
 /* ---------- share mode ---------- */
 let shareView = 'month';
@@ -183,7 +221,7 @@ function renderShare() {
   $('#shareCanvas').innerHTML = `<h1>${title}</h1>` + (shareView === 'month' ? monthHTML(cur.y, cur.m, wt) : yearHTML(cur.y, wt)) + `<div class="lgrow">${legendHTML()}</div>`;
   $('#sMonth').classList.toggle('on', shareView === 'month'); $('#sYear').classList.toggle('on', shareView === 'year');
 }
-$('#share').onclick = () => { shareView = view; $('#shareView').hidden = false; $('#shareView').classList.remove('clean'); renderShare(); };
+$('#share').onclick = () => { if (selecting) endSelect(); shareView = view; $('#shareView').hidden = false; $('#shareView').classList.remove('clean'); renderShare(); };
 $('#shareTags').onchange = renderShare;
 $('#sMonth').onclick = () => { shareView = 'month'; renderShare(); }; $('#sYear').onclick = () => { shareView = 'year'; renderShare(); };
 $('#shareHide').onclick = () => { $('#shareView').classList.add('clean'); $('#shareShow').hidden = false; };
